@@ -54,26 +54,23 @@ function getTodayDate() {
   return today.toISOString().split('T')[0];
 }
 
-// Fetch NBA players
+// Fetch NBA players from today's games only
 async function fetchNBAPlayers() {
   try {
-    // Try RapidAPI first
-    const response = await axios.get('https://allsportsapi2.p.rapidapi.com/api/basketball/tournament/138/season/42914/best-players/per-game/regularSeason', nbaApiConfig);
-    if (response.data && response.data.result) {
-      return response.data.result.map(player => player.player_name);
-    }
-  } catch (error) {
-    console.log('RapidAPI not available for NBA, falling back to ESPN API');
-  }
-
-  // Fallback to ESPN API
-  try {
+    // Get today's games first
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    
     const response = await axios.get('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard');
     const games = response.data.events || [];
     const players = [];
     
+    // Only process today's regular season games
     games.forEach(game => {
-      if (game.competitions && game.competitions[0]) {
+      const gameDate = new Date(game.date).toISOString().split('T')[0];
+      const isRegularSeason = game.season && game.season.type === 2;
+      
+      if (gameDate === todayString && isRegularSeason && game.competitions && game.competitions[0]) {
         const competition = game.competitions[0];
         
         // Get players from leaders
@@ -104,33 +101,31 @@ async function fetchNBAPlayers() {
       }
     });
     
-    return players;
+    console.log(`NBA: Found ${players.length} players from today's games`);
+    return players; // Return empty array if no games today
   } catch (error) {
     console.error('Error fetching NBA players:', error.message);
     return [];
   }
 }
 
-// Fetch NFL players
+// Fetch NFL players from today's games only
 async function fetchNFLPlayers() {
   try {
-    // Try RapidAPI first
-    const response = await axios.get('https://allsportsapi2.p.rapidapi.com/api/american-football/tournament/19510/season/46788/team-events/total', nflApiConfig);
-    if (response.data && response.data.result) {
-      return response.data.result.map(player => player.player_name);
-    }
-  } catch (error) {
-    console.log('RapidAPI not available for NFL, falling back to ESPN API');
-  }
-
-  // Fallback to ESPN API
-  try {
+    // Get today's games first
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    
     const response = await axios.get('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard');
     const games = response.data.events || [];
     const players = [];
     
+    // Only process today's regular season games
     games.forEach(game => {
-      if (game.competitions && game.competitions[0]) {
+      const gameDate = new Date(game.date).toISOString().split('T')[0];
+      const isRegularSeason = game.season && game.season.type === 2;
+      
+      if (gameDate === todayString && isRegularSeason && game.competitions && game.competitions[0]) {
         const competition = game.competitions[0];
         
         // Get players from leaders
@@ -161,22 +156,31 @@ async function fetchNFLPlayers() {
       }
     });
     
-    return players;
+    console.log(`NFL: Found ${players.length} players from today's games`);
+    return players; // Return empty array if no games today
   } catch (error) {
     console.error('Error fetching NFL players:', error.message);
     return [];
   }
 }
 
-// Fetch MLB players
+// Fetch MLB players from today's games only
 async function fetchMLBPlayers() {
   try {
+    // Get today's games first
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    
     const response = await axios.get('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard');
     const games = response.data.events || [];
     const players = [];
     
+    // Only process today's regular season games
     games.forEach(game => {
-      if (game.competitions && game.competitions[0]) {
+      const gameDate = new Date(game.date).toISOString().split('T')[0];
+      const isRegularSeason = game.season && game.season.type === 2;
+      
+      if (gameDate === todayString && isRegularSeason && game.competitions && game.competitions[0]) {
         const competition = game.competitions[0];
         
         // Get players from leaders
@@ -207,22 +211,31 @@ async function fetchMLBPlayers() {
       }
     });
     
-    return players;
+    console.log(`MLB: Found ${players.length} players from today's games`);
+    return players; // Return empty array if no games today
   } catch (error) {
     console.error('Error fetching MLB players:', error.message);
     return [];
   }
 }
 
-// Fetch WNBA players
+// Fetch WNBA players from today's games only
 async function fetchWNBAPlayers() {
   try {
+    // Get today's games first
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    
     const response = await axios.get('https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard');
     const games = response.data.events || [];
     const players = [];
     
+    // Only process today's regular season games
     games.forEach(game => {
-      if (game.competitions && game.competitions[0]) {
+      const gameDate = new Date(game.date).toISOString().split('T')[0];
+      const isRegularSeason = game.season && game.season.type === 2;
+      
+      if (gameDate === todayString && isRegularSeason && game.competitions && game.competitions[0]) {
         const competition = game.competitions[0];
         
         // Get players from competitors leaders (WNBA structure is different)
@@ -244,14 +257,15 @@ async function fetchWNBAPlayers() {
       }
     });
     
-    return players;
+    console.log(`WNBA: Found ${players.length} players from today's games`);
+    return players; // Return empty array if no games today
   } catch (error) {
     console.error('Error fetching WNBA players:', error.message);
     return [];
   }
 }
 
-// Fetch live games with date filtering
+// Fetch live games with improved date filtering and season type filtering
 async function fetchLiveGames(sport) {
   try {
     const today = new Date();
@@ -261,11 +275,15 @@ async function fetchLiveGames(sport) {
       case 'MLB':
         const response = await axios.get('https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard');
         const mlbGames = response.data.events || [];
-        // Filter for today's games only
-        return mlbGames.filter(game => {
+        // Filter for today's games only and regular season only
+        const todayMlbGames = mlbGames.filter(game => {
           const gameDate = new Date(game.date).toISOString().split('T')[0];
-          return gameDate === todayString;
+          const isRegularSeason = game.season && game.season.type === 2; // 2 = regular season
+          return gameDate === todayString && isRegularSeason;
         });
+        
+        console.log(`MLB: Found ${todayMlbGames.length} regular season games today out of ${mlbGames.length} total games`);
+        return todayMlbGames;
       
       case 'NBA':
         try {
@@ -284,10 +302,16 @@ async function fetchLiveGames(sport) {
         // Fallback to ESPN API
         const espnResponse = await axios.get('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard');
         const nbaGames = espnResponse.data.events || [];
-        return nbaGames.filter(game => {
+        
+        // Filter for today's games only and regular season only - NBA is out of season
+        const todayNbaGames = nbaGames.filter(game => {
           const gameDate = new Date(game.date).toISOString().split('T')[0];
-          return gameDate === todayString;
+          const isRegularSeason = game.season && game.season.type === 2; // 2 = regular season
+          return gameDate === todayString && isRegularSeason;
         });
+        
+        console.log(`NBA: Found ${todayNbaGames.length} regular season games today out of ${nbaGames.length} total games`);
+        return todayNbaGames; // Return empty array for NBA since it's out of season
       
       case 'NFL':
         try {
@@ -306,18 +330,30 @@ async function fetchLiveGames(sport) {
         // Fallback to ESPN API
         const espnResponseNFL = await axios.get('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard');
         const nflGames = espnResponseNFL.data.events || [];
-        return nflGames.filter(game => {
+        
+        // Filter for today's games only and regular season only (no preseason)
+        const todayNflGames = nflGames.filter(game => {
           const gameDate = new Date(game.date).toISOString().split('T')[0];
-          return gameDate === todayString;
+          const isRegularSeason = game.season && game.season.type === 2; // 2 = regular season
+          return gameDate === todayString && isRegularSeason;
         });
+        
+        console.log(`NFL: Found ${todayNflGames.length} regular season games today out of ${nflGames.length} total games`);
+        return todayNflGames;
       
       case 'WNBA':
         const wnbaResponse = await axios.get('https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/scoreboard');
         const wnbaGames = wnbaResponse.data.events || [];
-        return wnbaGames.filter(game => {
+        
+        // Filter for today's games only and regular season only
+        const todayWnbaGames = wnbaGames.filter(game => {
           const gameDate = new Date(game.date).toISOString().split('T')[0];
-          return gameDate === todayString;
+          const isRegularSeason = game.season && game.season.type === 2; // 2 = regular season
+          return gameDate === todayString && isRegularSeason;
         });
+        
+        console.log(`WNBA: Found ${todayWnbaGames.length} regular season games today out of ${wnbaGames.length} total games`);
+        return todayWnbaGames;
       
       default:
         return [];
@@ -363,27 +399,27 @@ app.get('/api/today-players', async (req, res) => {
   
   let players = [];
 
-  // If we have a specific challenge, use position-specific players
-  if (challenge && positionPlayers[sport] && positionPlayers[sport][challenge]) {
-    players = positionPlayers[sport][challenge];
-  } else {
-    // Fallback to API fetching for general players
-    switch (sport.toUpperCase()) {
-      case 'NBA':
-        players = await fetchNBAPlayers();
-        break;
-      case 'NFL':
-        players = await fetchNFLPlayers();
-        break;
-      case 'MLB':
-        players = await fetchMLBPlayers();
-        break;
-      case 'WNBA':
-        players = await fetchWNBAPlayers();
-        break;
-      default:
-        players = [];
-    }
+  // Always fetch players from today's actual games
+  switch (sport.toUpperCase()) {
+    case 'NBA':
+      players = await fetchNBAPlayers();
+      break;
+    case 'NFL':
+      players = await fetchNFLPlayers();
+      break;
+    case 'MLB':
+      players = await fetchMLBPlayers();
+      break;
+    case 'WNBA':
+      players = await fetchWNBAPlayers();
+      break;
+    default:
+      players = [];
+  }
+
+  // If no players found from today's games, return empty array
+  if (players.length === 0) {
+    console.log(`No players found for ${sport} today - no games scheduled`);
   }
 
   res.json({ players });
